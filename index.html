@@ -1,0 +1,503 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>EHC NYC Dose Conversion Calculator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+
+<style>
+/* Layout: single-column step-by-step calculator, navy brand + teal accent */
+:root {
+  --bg:         #f0f3f8;
+  --surface:    #ffffff;
+  --navy:       #1b2d4f;
+  --navy-mid:   #243d68;
+  --teal:       #25b8aa;
+  --ink:        #141e30;
+  --muted:      #6878a0;
+  --border:     #dce4f0;
+  --panel:      #192840;
+  --panel-fg:   #ffffff;
+  --panel-dim:  rgba(255,255,255,.55);
+  --step-bg:    #edf0f8;
+  --input-bg:   #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:       #0d1825;
+    --surface:  #152035;
+    --ink:      #dce8f8;
+    --muted:    #6580aa;
+    --border:   #1e3050;
+    --step-bg:  #1a2d45;
+    --input-bg: #152035;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:       #0d1825;
+  --surface:  #152035;
+  --ink:      #dce8f8;
+  --muted:    #6580aa;
+  --border:   #1e3050;
+  --step-bg:  #1a2d45;
+  --input-bg: #152035;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  padding-block: 0 48px;
+  padding-left:  max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--navy);
+  text-align: center;
+  padding: 32px 24px 28px;
+  margin-bottom: 28px;
+  margin-left:  calc(-1 * max(16px, env(safe-area-inset-left,  0px)));
+  margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+}
+.brand-name {
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: .04em;
+}
+.brand-name em { font-style: normal; color: var(--teal); }
+.brand-tag {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.45);
+  margin-top: 6px;
+}
+
+/* ── Cards ── */
+.wrap { max-width: 600px; margin: 0 auto; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 24px 20px;
+  margin-bottom: 16px;
+}
+
+.card-eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 18px;
+}
+
+/* ── Steps ── */
+.step { margin-bottom: 18px; }
+.step:last-child { margin-bottom: 0; }
+
+.step-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+
+/* ── Inputs ── */
+input[type="number"], select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--input-bg);
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color .15s;
+}
+input[type="number"]:focus, select:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(37,184,170,.12);
+}
+
+/* dose input + unit toggle side by side */
+.dose-group { display: flex; gap: 10px; align-items: stretch; }
+.dose-group input { flex: 1; min-width: 0; }
+
+.unit-toggle {
+  display: flex;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.unit-btn {
+  padding: 11px 13px;
+  border: none;
+  background: transparent;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  line-height: 1;
+}
+.unit-btn.active { background: var(--navy); color: #fff; }
+
+/* ── Calculate button ── */
+.calc-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-top: 6px;
+  background: var(--teal);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  cursor: pointer;
+  transition: filter .15s;
+}
+.calc-btn:hover { filter: brightness(1.07); }
+.calc-btn:active { filter: brightness(.95); }
+
+/* ── Result panel (dark) ── */
+.result-panel {
+  background: var(--panel);
+  border-radius: 14px;
+  padding: 22px 20px 18px;
+  margin-bottom: 16px;
+}
+
+.result-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--panel-dim);
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.dose-boxes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.dose-box { text-align: center; }
+.dose-box-lbl {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--panel-dim);
+  margin-bottom: 5px;
+}
+.dose-box-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 30px;
+  font-weight: 500;
+  color: var(--panel-fg);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.dose-box-val.accent { color: var(--teal); }
+.dose-box-unit {
+  font-size: 10px;
+  color: var(--panel-dim);
+  margin-top: 3px;
+}
+
+.panel-note {
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--panel-dim);
+  border-top: 1px solid rgba(255,255,255,.1);
+  padding-top: 13px;
+  line-height: 1.5;
+}
+.panel-note strong { color: var(--panel-fg); }
+.panel-note .hi { color: var(--teal); font-weight: 600; }
+
+/* ── Program selector ── */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 9px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  background: transparent;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .15s;
+  text-align: center;
+}
+.tab-btn.active {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: #fff;
+}
+
+/* ── Disclaimer ── */
+.disclaimer {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 520px;
+  margin: 4px auto 0;
+}
+</style>
+
+<div class="header">
+  <div class="brand-name">EHC<em>NYC</em></div>
+  <div class="brand-tag">Retatrutide · Dose Conversion Calculator</div>
+</div>
+
+<div class="wrap">
+
+  <!-- ── Step 1–3: Previous Treatment ── -->
+  <div class="card">
+    <div class="card-eyebrow">Previous Retatrutide Treatment</div>
+
+    <div class="step">
+      <label class="step-label" for="conc">Step 1 — Strength of your most recent vial (mg/mL)</label>
+      <input type="number" id="conc" min="0" step="0.1" placeholder="e.g. 2.5">
+    </div>
+
+    <div class="step">
+      <label class="step-label" for="vol">Step 2 — Volume of your most recent vial (mL)</label>
+      <input type="number" id="vol" min="0" step="0.5" placeholder="e.g. 1">
+    </div>
+
+    <div class="step">
+      <label class="step-label">Step 3 — Your last dose (mg or units)</label>
+      <div class="dose-group">
+        <input type="number" id="dose" min="0" step="0.01" placeholder="e.g. 1">
+        <div class="unit-toggle" role="group" aria-label="Dose unit">
+          <button class="unit-btn active" id="btn-mg"  onclick="setUnit('mg')">mg</button>
+          <button class="unit-btn"        id="btn-u"   onclick="setUnit('units')">Units</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="calc-btn" onclick="calcCurrent()">Calculate My Current Dose →</button>
+  </div>
+
+  <!-- Current dose result -->
+  <div class="result-panel" id="current-result" hidden>
+    <div class="result-label">Your Current Dose</div>
+    <div class="dose-boxes">
+      <div class="dose-box">
+        <div class="dose-box-lbl">Dose</div>
+        <div class="dose-box-val" id="r-mg">—</div>
+        <div class="dose-box-unit">mg</div>
+      </div>
+      <div class="dose-box">
+        <div class="dose-box-lbl">Volume</div>
+        <div class="dose-box-val accent" id="r-ml">—</div>
+        <div class="dose-box-unit">mL</div>
+      </div>
+      <div class="dose-box">
+        <div class="dose-box-lbl">Syringe</div>
+        <div class="dose-box-val" id="r-units">—</div>
+        <div class="dose-box-unit">units</div>
+      </div>
+    </div>
+    <div class="panel-note" id="r-avail"></div>
+  </div>
+
+  <!-- ── Step 4: New Program ── -->
+  <div class="card" id="program-card" hidden>
+    <div class="card-eyebrow">New Program to Order</div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab-btn active" id="tab-reta"  onclick="switchTab('reta')"  role="tab">Retatrutide</button>
+      <button class="tab-btn"        id="tab-retac" onclick="switchTab('retac')" role="tab">Retatrutide + Cyanocobalamin</button>
+    </div>
+
+    <div class="step">
+      <label class="step-label" for="prog-select">Select the program you wish to order</label>
+      <select id="prog-select" onchange="calcNew()">
+        <option value="">— Choose a program —</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- New dose result -->
+  <div class="result-panel" id="new-result" hidden>
+    <div class="result-label">Your New Dose — Same <span id="new-mg-label">—</span> mg</div>
+    <div class="dose-boxes">
+      <div class="dose-box">
+        <div class="dose-box-lbl">Dose</div>
+        <div class="dose-box-val" id="n-mg">—</div>
+        <div class="dose-box-unit">mg</div>
+      </div>
+      <div class="dose-box">
+        <div class="dose-box-lbl">Volume</div>
+        <div class="dose-box-val accent" id="n-ml">—</div>
+        <div class="dose-box-unit">mL</div>
+      </div>
+      <div class="dose-box">
+        <div class="dose-box-lbl">Syringe</div>
+        <div class="dose-box-val" id="n-units">—</div>
+        <div class="dose-box-unit">units</div>
+      </div>
+    </div>
+    <div class="panel-note" id="n-avail"></div>
+  </div>
+
+  <p class="disclaimer">
+    For office use only. Always confirm doses with the prescribing provider before administering.
+    Units refer to standard U-100 insulin syringe markings (100 units = 1 mL).
+  </p>
+
+</div><!-- /wrap -->
+
+<script>
+// ── Program data ──
+const PROGRAMS = {
+  reta: [
+    { name: 'Retatrutide 2mg/0.5mL  (4 mg/mL · 2 mL)',   conc: 4,  vol: 2 },
+    { name: 'Retatrutide 4mg/0.5mL  (8 mg/mL · 2 mL)',   conc: 8,  vol: 2 },
+    { name: 'Retatrutide 6mg/0.5mL  (12 mg/mL · 2 mL)',  conc: 12, vol: 2 },
+    { name: 'Retatrutide 12mg/0.5mL (24 mg/mL · 2 mL)',  conc: 24, vol: 2 },
+  ],
+  retac: [
+    { name: 'Reta/Cyanocobalamin 1mg/0.5mg/0.5mL  (2 mg/mL · 2 mL)',  conc: 2,  vol: 2 },
+    { name: 'Reta/Cyanocobalamin 2mg/0.5mg/0.5mL  (4 mg/mL · 2 mL)',  conc: 4,  vol: 2 },
+    { name: 'Reta/Cyanocobalamin 4mg/0.5mg/0.5mL  (8 mg/mL · 2 mL)',  conc: 8,  vol: 2 },
+    { name: 'Reta/Cyanocobalamin 6mg/0.5mg/0.5mL  (12 mg/mL · 2 mL)', conc: 12, vol: 2 },
+    { name: 'Reta/Cyanocobalamin 8mg/0.5mg/0.5mL  (16 mg/mL · 2 mL)', conc: 16, vol: 2 },
+    { name: 'Reta/Cyanocobalamin 12mg/0.5mg/0.5mL (24 mg/mL · 2 mL)', conc: 24, vol: 2 },
+    { name: 'Reta/Cyanocobalamin 15mg/0.5mg/0.5mL (30 mg/mL · 2 mL)', conc: 30, vol: 2 },
+  ]
+};
+
+let doseUnit = 'mg';   // current input unit
+let doseMg   = null;   // calculated mg dose from step 1-3
+let activeTab = 'reta';
+
+function setUnit(u) {
+  doseUnit = u;
+  document.getElementById('btn-mg').classList.toggle('active', u === 'mg');
+  document.getElementById('btn-u').classList.toggle('active',  u === 'units');
+}
+
+function fmt(n, decimals) {
+  const v = parseFloat(n.toFixed(decimals));
+  return v % 1 === 0 ? v.toString() : v.toFixed(decimals).replace(/\.?0+$/, '');
+}
+
+function calcCurrent() {
+  const conc  = parseFloat(document.getElementById('conc').value);
+  const vol   = parseFloat(document.getElementById('vol').value);
+  const doseV = parseFloat(document.getElementById('dose').value);
+
+  if (!conc || !doseV) {
+    alert('Please fill in the concentration and your dose amount.');
+    return;
+  }
+
+  let mg, ml, units;
+  if (doseUnit === 'mg') {
+    mg    = doseV;
+    ml    = mg / conc;
+    units = ml * 100;
+  } else {
+    units = doseV;
+    ml    = units / 100;
+    mg    = ml * conc;
+  }
+
+  doseMg = mg;
+
+  // Current vial totals
+  const totalMg    = conc * (vol || 1);
+  const totalUnits = (vol || 1) * 100;
+
+  document.getElementById('r-mg').textContent    = fmt(mg, 3);
+  document.getElementById('r-ml').textContent    = fmt(ml, 2);
+  document.getElementById('r-units').textContent = fmt(units, 1);
+  document.getElementById('r-avail').innerHTML   =
+    `Vial total: <strong>${fmt(totalMg,2)} mg</strong> &nbsp;·&nbsp; <strong>${fmt(totalUnits,0)} units</strong> available`;
+
+  document.getElementById('current-result').hidden = false;
+  document.getElementById('program-card').hidden   = false;
+  document.getElementById('new-result').hidden     = true;
+  document.getElementById('prog-select').value     = '';
+
+  populatePrograms();
+}
+
+function populatePrograms() {
+  const sel = document.getElementById('prog-select');
+  sel.innerHTML = '<option value="">— Choose a program —</option>';
+  PROGRAMS[activeTab].forEach((p, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = p.name + '  (' + p.conc + ' mg/mL)';
+    sel.appendChild(opt);
+  });
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-reta').classList.toggle('active',  tab === 'reta');
+  document.getElementById('tab-retac').classList.toggle('active', tab === 'retac');
+  document.getElementById('new-result').hidden = true;
+  populatePrograms();
+}
+
+function calcNew() {
+  if (doseMg === null) return;
+  const sel = document.getElementById('prog-select');
+  const idx = sel.value;
+  if (idx === '') { document.getElementById('new-result').hidden = true; return; }
+
+  const prog       = PROGRAMS[activeTab][parseInt(idx)];
+  const newMl      = doseMg / prog.conc;
+  const newUnits   = newMl * 100;
+  const totalUnits = prog.vol * 100;
+  const totalMg    = prog.conc * prog.vol;
+
+  document.getElementById('new-mg-label').textContent    = fmt(doseMg, 3);
+  document.getElementById('n-mg').textContent             = fmt(doseMg, 3);
+  document.getElementById('n-ml').textContent             = fmt(newMl, 2);
+  document.getElementById('n-units').textContent          = fmt(newUnits, 1);
+  document.getElementById('n-avail').innerHTML            =
+    `New vial total: <strong>${fmt(totalMg,2)} mg</strong> &nbsp;·&nbsp; <strong>${fmt(totalUnits,0)} units</strong> available<br>` +
+    `<span class="hi">You have enough for ${fmt(totalUnits / newUnits, 1)} doses at this amount.</span>`;
+
+  document.getElementById('new-result').hidden = false;
+}
+</script>
+
+</body></html>
